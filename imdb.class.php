@@ -29,7 +29,11 @@
     if ($this->debug) echo "<b><font color='#ff0000'>$scalar</font></b><br>";
   }
   function debug_object($object) {
-    if ($this->debug) echo "<font color='#ff0000'><pre>";print_r($object);echo "</pre></font>";
+    if ($this->debug) {
+      echo "<font color='#ff0000'><pre>";
+      print_r($object);
+      echo "</pre></font>";
+    }
   }
   function debug_html($html) {
     if ($this->debug) echo "<b><font color='#ff0000'>".htmlentities($html)."</font></b><br>";
@@ -55,6 +59,7 @@
     case "Quotes"      : $urlname="/quotes"; break;
     case "Trailers"    : $urlname="/trailers"; break;
     case "Goofs"       : $urlname="/goofs"; break;
+    case "Trivia"      : $urlname="/trivia"; break;
     default            :
       $this->page[$wt] = "unknown page identifier";
       $this->debug_scalar("Unknown page identifier: $wt");
@@ -135,6 +140,7 @@
    $this->page["CrazyCredits"] = "";
    $this->page["Amazon"] = "";
    $this->page["Goofs"] = "";
+   $this->page["Trivia"] = "";
    $this->page["Plot"] = "";
    $this->page["Comments"] = "";
    $this->page["Quotes"] = "";
@@ -167,6 +173,7 @@
    $this->main_trailers = array();
    $this->crazy_credits = array();
    $this->goofs = array();
+   $this->trivia = array();
   }
 
   /** Initialize class
@@ -555,7 +562,7 @@
           $tag_s = strpos($trail,"=", $tag_s) +2;
 	  $tag_e = strpos($trail,'">',$tag_s);
           $url   = substr($trail, $tag_s, $tag_e - $tag_s);
-	  $this->main_trailers[] = "http://imdb.com/$url";
+	  $this->main_trailers[] = "http://".$this->imdbsite."/$url";
           $tag_s = $tag_e;
         }
       }
@@ -1065,6 +1072,7 @@
     return $this->crazy_credits;
   }
 
+#------------------------------------------------------------[ /goofs page ]---
   /** Get the goofs
    * @method goofs
    * @return array goofs (array[0..n] of array[type,content]
@@ -1082,6 +1090,26 @@
       for ($i=0;$i<$gc;++$i) $this->goofs[] = array("type"=>$matches[1][$i],"content"=>$matches[2][$i]);
     }
     return $this->goofs;
+  }
+
+#-----------------------------------------------------------[ /trivia page ]---
+  /** Get the trivia info
+   * @method trivia
+   * @return array trivia (array[0..n] string
+   */
+  function trivia() {
+    if (empty($this->trivia)) {
+      if (empty($this->page["Trivia"])) $this->openpage("Trivia");
+      if ($this->page["Trivia"] == "cannot open page") return array(); // no such page
+      $tag_s = strpos($this->page["Trivia"],'<ul class="trivia">');
+      $tag_e = strrpos($this->page["Trivia"],'<ul class="trivia">'); // maybe more than one
+      $tag_e = strrpos($this->page["Trivia"],"</ul>",$tag_e);
+      $goofs = substr($this->page["Trivia"],$tag_s,$tag_e - $tag_s);
+      preg_match_all("/<li>(.*?)<br><br><\/li>/",$goofs,$matches);
+      $gc = count($matches[1]);
+      for ($i=0;$i<$gc;++$i) $this->trivia[] = str_replace('href="/','href="http://'.$this->imdbsite."/",$matches[1][$i]);
+    }
+    return $this->trivia;
   }
 
  } // end class imdb
