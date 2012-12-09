@@ -13,3 +13,6 @@ http://svn.izzysoft.de/repos/imdbphp/
 
 Documentation and other useful resources can be found here:
 http://projects.izzysoft.de/trac/imdbphp/wiki
+
+Branch "master" is the unmodified svn trunk.
+Branch "gitdev" contains this README and a .gitignore file and will be rebased regularly.
