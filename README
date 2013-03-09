@@ -1,0 +1,18 @@
+IMDBPHP2
+========
+
+IMDBPHP provides an API (Application Programmers Interface) to the movie information stored at the  IMDB.COM site. As this and the name suggests, it is primarily targeted at PHP programmers who want to extend their programs or their site with these movie information.
+
+IMDBPHP2 is the second generation (drop-in replacement for IMDBPHP), and additionally supports  MoviePilot.
+
+Both are Open Source and protected by the GPL.
+
+
+This github repository is a clone of the project's original svn repository found here:
+http://svn.izzysoft.de/repos/imdbphp/
+
+Documentation and other useful resources can be found here:
+http://projects.izzysoft.de/trac/imdbphp/wiki
+
+Branch "master" is the unmodified svn trunk.
+Branch "gitdev" contains this README and a .gitignore file and will be rebased regularly.
