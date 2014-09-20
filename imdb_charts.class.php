@@ -27,11 +27,14 @@ include_once (dirname(__FILE__)."/mdb_base.class.php");
 class imdb_topcharts {
    var $chartspage = "http://www.imdb.com/chart/";
    var $page = "";
-   /** Constructor: Get data from the charts page
+
+   /**
+    * Constructor: Get data from the charts page
     * @constructor imdb_topcharts
+    * @param optional object mdb_config override default config
     */
-   function imdb_topcharts(){
-      $req = new MDB_Request($this->chartspage);
+   function __construct(mdb_config $config = null){
+      $req = new MDB_Request($this->chartspage, $config);
       $req->sendRequest();
       $this->page=$req->getResponseBody();
       $this->revision = preg_replace('|^.*?(\d+).*$|','$1','$Revision$');

@@ -10,7 +10,6 @@
 
  /* $Id$ */
 
-require_once (dirname(__FILE__)."/browseremulator.class.php");
 if (defined('IMDBPHP_CONFIG')) require_once (IMDBPHP_CONFIG);
 else require_once (dirname(__FILE__)."/mdb_config.class.php");
 require_once (dirname(__FILE__)."/mdb_request.class.php");
@@ -40,29 +39,51 @@ define('FULL_ACCESS',9);
 #===================================================[ The IMDB Base class ]===
 /** Accessing Movie information
  * @package MDBApi
- * @class mdb_base
- * @extends mdb_config
  * @author Georgos Giagas
  * @author Izzy (izzysoft AT qumran DOT org)
  * @copyright (c) 2002-2004 by Giorgos Giagas and (c) 2004-2009 by Itzchak Rehberg and IzzySoft
  * @version $Revision$ $Date$
  */
 class mdb_base extends mdb_config {
-  var $version = '2.2.2';
+  public $version = '2.3.3';
 
-  /** Last response from the IMDB server
-   *  This is a 3-digit code according to RFC2616. This is e.g. a "200" for "OK",
-   *  "404" for "not found", etc.). This attribute holds the response from the
-   *  last query to the server and is overwritten on the next. Additional to the
-   *  codes defined in RFC2616, "000" means the server could not be contacted -
-   *  e.g. IMDB site down, or networking problems. If it is completely empty, you
-   *  did not run any request yet ;) Consider this attribute read-only - you can
-   *  use it to figure out why no information is returned in some cases.
-   * @class mdb_base
-   * @attribute string lastServerResponse
+  /**
+   * The last HTTP status code from the IMDB server
+   * This is a 3-digit code according to RFC2616. This is e.g. a "200" for "OK",
+   * "404" for "not found", etc.). This attribute holds the response from the
+   * last query to the server and is overwritten on the next. Additional to the
+   * codes defined in RFC2616, "000" means the server could not be contacted -
+   * e.g. IMDB site down, or networking problems. If it is completely empty, you
+   * did not run any request yet ;) Consider this attribute read-only - you can
+   * use it to figure out why no information is returned in some cases.
+   * @var string lastServerResponse
    */
+  public $lastServerResponse;
 
-  /** Setting the IMDB fallback mode
+  protected $months = array("January"=>"01","February"=>"02","March"=>"03","April"=>"04",
+           "May"=>"05","June"=>"06","July"=>"07","August"=>"08","September"=>"09",
+           "October"=>"10","November"=>"11","December"=>"12");
+
+
+  /** Initialize the class
+   * @constructor mdb_base
+   * @param optional object mdb_config override default config
+   */
+  public function __construct(mdb_config $config = null) {
+    parent::__construct();
+
+    if ($config) {
+      foreach ($config as $key => $value) {
+        $this->$key = $value;
+      }
+    }
+
+    $this->lastServerResponse = "";
+    if ($this->storecache && ($this->cache_expire > 0)) $this->purge();
+  }
+
+  /**
+   * Setting the IMDB fallback mode
    * @method set_pilot_imdbfill
    * @param int level
    * @see imdb_config::pilot_imdbfill attribute for details
@@ -73,11 +94,12 @@ class mdb_base extends mdb_config {
     $this->pilot_imdbfill = $level;
   }
 
-  /** Check the IMDB fallback level for non-IMDB classes.
-   *  As <code>pilot_imdbfill</code> is a protected variable, this is the only
-   *  way to read its current value.
-   * @method get_pilot_imdbfill()
-   * @return int pilot_imdbfill
+  /**
+   * Check the IMDB fallback level for non-IMDB classes.
+   * As <code>pilot_imdbfill</code> is a protected variable, this is the only
+   * way to read its current value.
+   * @method get_pilot_imdbfill
+   * @return int
    */
   function get_pilot_imdbfill() {
     return $this->pilot_imdbfill;
@@ -98,21 +120,19 @@ class mdb_base extends mdb_config {
     if ($this->debug) echo "<b><font color='#ff0000'>".htmlentities($html)."</font></b><br>";
   }
 
- #---------------------------------------------------------[ Other Helpers ]---
-  protected $months = array("January"=>"01","February"=>"02","March"=>"03","April"=>"04",
-           "May"=>"05","June"=>"06","July"=>"07","August"=>"08","September"=>"09",
-           "October"=>"10","November"=>"11","December"=>"12");
-  /** Get numerical value for month name
-   * @method monthNo
+  /**
+   * Get numerical value for month name
+   * @method protected monthNo
    * @param string name name of month
    * @return integer month number
    */
-  function monthNo($mon) {
+  protected function monthNo($mon) {
     return @$this->months[$mon];
   }
 
  #-------------------------------------------------------------[ Open Page ]---
-  /** Define page urls
+  /**
+   * Define page urls
    * @method protected set_pagename
    * @param string wt internal name of the page
    * @return string urlname page URL
@@ -121,14 +141,14 @@ class mdb_base extends mdb_config {
    return false;
   }
 
-  /** Obtain page from web server
+  /**
+   * Obtain page from web server
    * @method protected getWebPage
    * @param string wt internal name of the page
    * @param string url URL to open
    */
   protected function getWebPage($wt,$url) {
-    $req = new MDB_Request("");
-    $req->setURL($url);
+    $req = new MDB_Request($url, $this);
     if ($req->sendRequest()!==FALSE) $head = $req->getLastResponseHeaders();
     else ($head[0] = "HTTP/1.1 000");
     $response = explode(" ",$head[0]);
@@ -168,8 +188,8 @@ class mdb_base extends mdb_config {
     }
   }
 
-  /** Helper: Read a page from cache
-   *  and stores it into the $this->page array
+  /**
+   * Helper: Read a page from cache and stores it into the $this->page array
    * @method protected readCachedPage
    * @param string wt internal name of the page
    * @param mixed id ID of the record to be used for the file name (usually imdbID)
@@ -184,8 +204,8 @@ class mdb_base extends mdb_config {
     } // end cache
   }
 
-  /** Helper: Write a page to cache
-   *  after taking it from the $this->page array
+  /**
+   * Helper: Write a page to cache after taking it from the $this->page array
    * @method protected writeCachedPage
    * @param string wt internal name of the page
    * @param mixed id ID of the record to be used for the file name (usually imdbID)
@@ -199,7 +219,8 @@ class mdb_base extends mdb_config {
     }
   }
 
-  /** Load an IMDB page into the corresponding property (variable)
+  /**
+   * Load an IMDB page into the corresponding property (variable)
    * @method protected openpage
    * @param string wt internal name of the page
    * @param optional string type whether its a "movie" (default) or a "person"
@@ -239,23 +260,26 @@ class mdb_base extends mdb_config {
   }
 
  #-------------------------------------------------------[ Get current MID ]---
-  /** Retrieve the IMDB ID
+  /**
+   * Retrieve the IMDB ID
    * @method imdbid
    * @return string id IMDBID currently used
    */
   public function imdbid() {
-   return $this->imdbID;
+    return $this->imdbID;
   }
 
  #--------------------------------------------------[ Start (over) / Reset ]---
-  /** Reset page vars
+  /**
+   * Reset page vars
    * @method protected reset_vars
    */
   protected function reset_vars() {
     return;
   }
 
-  /** Setup class for a new IMDB id
+  /**
+   * Setup class for a new IMDB id
    * @method setid
    * @param string id IMDBID of the requested movie
    */
@@ -265,21 +289,11 @@ class mdb_base extends mdb_config {
     $this->reset_vars();
   }
 
- #-----------------------------------------------------------[ Constructor ]---
-  /** Initialize class
-   * @constructor mdb_base
-   * @param string id IMDBID to use for data retrieval
-   */
-  public function __construct($id) {
-    parent::__construct();
-    $this->lastServerResponse = "";
-    if ($this->storecache && ($this->cache_expire > 0)) $this->purge();
-  }
-
  #---------------------------------------------------------[ Cache Purging ]---
-  /** Check cache and purge outdated files
-   *  This method looks for files older than the cache_expire set in the
-   *  mdb_config and removes them
+  /**
+   * Check cache and purge outdated files
+   * This method looks for files older than the cache_expire set in the
+   * mdb_config and removes them
    * @method purge
    */
   public function purge() {
@@ -303,12 +317,13 @@ class mdb_base extends mdb_config {
     }
   }
 
- /** Read content from cache
+ /**
+  * Read content from cache
   * @method cache_read
   * @param string filename file name relative to the cache dir to read from
-  * @param ref string content variable to store the retrieved content in
+  * @param string content variable to store the retrieved content in
   */
-  public function cache_read($file,&$content) {
+  public function cache_read($file, &$content) {
     $fname = $this->cachedir . '/' . $file;
     if (!file_exists($fname)) {
       $this->debug_scalar("cache_read: requested file '$file' not found in cache dir '".$this->cachedir."'");
@@ -338,9 +353,10 @@ class mdb_base extends mdb_config {
         }
       }
     }
-  } // end cache_read
+  }
 
- /** Writing content to cache
+ /**
+  * Writing content to cache
   * @method cache_write
   * @param string filename file name relative to cache dir to store the content into
   * @param ref string content content to store
@@ -364,6 +380,5 @@ class mdb_base extends mdb_config {
     }
   }
 
-} // end class movie_base
+}
 
-?>

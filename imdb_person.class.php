@@ -12,7 +12,6 @@
  /* $Id$ */
 
  require_once (dirname(__FILE__)."/person_base.class.php");
- require_once (dirname(__FILE__)."/imdbsearch.class.php");
 
  #=================================================[ The IMDB Person class ]===
  /** Accessing IMDB staff information
@@ -49,9 +48,10 @@
   /** Initialize class
    * @constructor imdb_person
    * @param string id IMDBID to use for data retrieval
+   * @param optional object mdb_config override default config
    */
-  function __construct($id) {
-    parent::__construct($id);
+  function __construct($id, mdb_config $config = null) {
+    parent::__construct($config);
     $this->revision = preg_replace('|^.*?(\d+).*$|','$1','$Revision$');
     $this->setid($id);
   }
@@ -115,14 +115,9 @@
    * @see IMDB person page / (Main page)
    */
   public function savephoto($path,$thumb=TRUE,$rerun=FALSE) {
-    if ($rerun) {
-        $req = new MDB_Request('','',!$this->trigger_referer);
-    } else {
-        $req = new MDB_Request('','',$this->trigger_referer);
-    }
     $photo_url = $this->photo ($thumb);
     if (!$photo_url) return FALSE;
-    $req->setURL($photo_url);
+    $req = new MDB_Request($photo_url, $this);
     $req->sendRequest();
     if (strpos($req->getResponseHeader("Content-Type"),'image/jpeg') === 0
       || strpos($req->getResponseHeader("Content-Type"),'image/gif') === 0
@@ -199,7 +194,7 @@
           $chname = $char[2];
         } else {
           $chid   = '';
-          if ( preg_match('!<br/>\s*([^>]+)\s*<div!',$matches[0][$i],$char) ) $chname = trim($char[1]);
+          if ( preg_match('!<br/>\s*([^>]+)\s*</*div!',$matches[0][$i],$char) ) $chname = trim($char[1]);
           else $chname = '';
         }
         if ( empty($chname) ) {
@@ -380,15 +375,15 @@
  #------------------------------------------------------------------[ Born ]---
   /** Get Birthday
    * @method born
-   * @return array birthday [day,month,mon,year,place]
+   * @return array|null birthday [day,month,mon,year,place]
    *         where month is the month name, and mon the month number
    * @see IMDB person page /bio
    */
   public function born() {
     if (empty($this->birthday)) {
       if ($this->page["Bio"] == "") $this->openpage ("Bio","person");
-      if ( preg_match('|Date of Birth</td>\s*(.*)<br|iUms',$this->page["Bio"],$match) ) {
-        preg_match('|/search/name\?birth_monthday=(\d+)-(\d+).*?>\d+\s*(.*?)<|',$match[1],$daymon);
+      if ( preg_match('|Date of Birth</td>\s*(.*)</td|iUms',$this->page["Bio"],$match) ) {
+        preg_match('|/search/name\?birth_monthday=(\d+)-(\d+).*?\n?>\d+&nbsp;(.*?)<|',$match[1],$daymon);
         preg_match('|/search/name\?birth_year=(\d{4})|ims',$match[1],$dyear);
         preg_match('|/search/name\?birth_place=.*?"\s*>(.*?)<|ims',$match[1],$dloc);
         $this->birthday = array("day"=>@$daymon[2],"month"=>@$daymon[3],"mon"=>@$daymon[1],"year"=>@$dyear[1],"place"=>@$dloc[1]);
@@ -407,13 +402,13 @@
   public function died() {
     if (empty($this->deathday)) {
       if ($this->page["Bio"] == "") $this->openpage ("Bio","person");
-      if (preg_match('|Date of Death</td>(.*?)</tr|ims',$this->page["Bio"],$match)) {
-        preg_match('|/search/name\?death_monthday=(\d+)-(\d+).*?>\d+\s*(&nbsp;)?(.*?)<|',$match[1],$daymon);
+      if (preg_match('|Date of Death</td>(.*?)</td|ims',$this->page["Bio"],$match)) {
+        preg_match('|/search/name\?death_monthday=(\d+)-(\d+).*?\n?>\d+&nbsp;(.*?)<|',$match[1],$daymon);
         preg_match('|/search/name\?death_date=(\d{4})|ims',$match[1],$dyear);
         if (!preg_match('/(\,\s*(&nbsp;)?([^\(]+))(&nbsp;)/ims',$match[1],$dloc))
           preg_match('!(\,\s*(&nbsp;)?([^\(]+?))\s*</td>!ims',$match[1],$dloc);
         preg_match('/\(([^\)]+)\)/ims',$match[1],$dcause);
-        $this->deathday = array("day"=>@$daymon[2],"month"=>@$daymon[4],"mon"=>@$daymon[1],"year"=>@$dyear[1],"place"=>@trim(strip_tags($dloc[3])),"cause"=>@$dcause[1]);
+        $this->deathday = array("day"=>@$daymon[2],"month"=>@$daymon[3],"mon"=>@$daymon[1],"year"=>@$dyear[1],"place"=>@trim(strip_tags($dloc[3])),"cause"=>@$dcause[1]);
       }
     }
     return $this->deathday;
@@ -495,7 +490,8 @@
    if (empty($this->bio_bio)) {
      if ( $this->page["Bio"] == "" ) $this->openpage ("Bio","person");
      if ( $this->page["Bio"] == "cannot open page" ) return array(); // no such page
-     if (@preg_match_all('|<h4[^>]*>Mini Bio[^<]*</h4>\s*<p>\s*(?<bio>.+?)\s*</p>(\s*<p><b>[^>]+</b>\s*(?<author>.+?)</p>)?|ms',$this->page["Bio"],$matches)) {
+     if ( preg_match('!<h4 class="li_group">Mini Bio[^>]+?>(.+?)<(h4 class="li_group"|div class="article")!ims',$this->page["Bio"],$block) ) {
+       preg_match_all('!<div class="soda.*?\s*<p>\s*(?<bio>.+?)\s</p>\s*<p><em>- IMDb Mini Biography By:\s*(?<author>.+?)\s*</em>!ims',$block[1],$matches);
        for ($i=0;$i<count($matches[0]);++$i) {
          $bio_bio["desc"] = str_replace("href=\"/name/nm","href=\"http://".$this->imdbsite."/name/nm",
                               str_replace("href=\"/title/tt","href=\"http://".$this->imdbsite."/title/tt",
@@ -504,9 +500,11 @@
          if (@preg_match('!href="(.+?)"[^>]*>\s*(.*?)\s*</a>!',$author,$match)) {
            $bio_bio["author"]["url"]  = $match[1];
            $bio_bio["author"]["name"] = $match[2];
+         } else {
+           $bio_bio["author"]["url"]  = '';
+           $bio_bio["author"]["name"] = trim($matches['author'][$i]);
          }
          $this->bio_bio[] = $bio_bio;
-         unset($bio_bio,$author);
        }
      }
    }
@@ -769,113 +767,7 @@
     return $this->SearchDetails;
   }
 
- } // end class imdb_person
-
- #==========================================[ The IMDB Person search class ]===
- /** Searching IMDB staff information
-  * @package IMDB
-  * @class imdbpsearch
-  * @extends imdbsearch
-  * @author Izzy (izzysoft AT qumran DOT org)
-  * @copyright 2008-2009 by Itzchak Rehberg and IzzySoft
-  * @version $Revision$ $Date$
-  */
- class imdbpsearch extends imdbsearch {
- #-----------------------------------------------------------[ Constructor ]---
-  /** Initialize class (read config etc.)
-   * @constructor imdbpsearch
-   */
-   function __construct() {
-     parent::__construct();
-   }
-
- #-------------------------------------------------------[ protected helpers ]---
-  /** Create the IMDB URL for the name search
-   * @method protected mkurl
-   * @return string url
-   */
-  protected function mkurl() {
-   if ($this->url !== NULL) {
-    $url = $this->url;
-   } else {
-     $query = "&s=nm";
-     if (!isset($this->maxresults)) $this->maxresults = 20;
-     if ($this->maxresults > 0) $query .= "&mx=20";
-     $url = "http://".$this->imdbsite."/find?q=".urlencode($this->name).$query;
-   }
-   mdb_base::debug_scalar("Using search URL '$url'");
-   return $url;
-  }
-
- #-----------------------------------------------------------[ get results ]---
-  /** Setup search results
-   * @method results
-   * @param optional string URL Replace search URL by your own
-   * @param optional boolean series not used, just for inheritance compatibility issues with PHP5.3+
-   * @return array results array of objects (instances of the imdb_person class)
-   */
-  public function results($url="",$series=TRUE) {
-   if ($this->page == "") {
-     if ($this->usecache && empty($url)) { // Try to read from cache
-       $this->cache_read(urlencode(strtolower($this->name)).'.search',$this->page);
-     } // end cache read
-     if (empty($url)) $url = $this->mkurl();
-     $be = new MDB_Request($url);
-     $be->sendrequest();
-     $fp = $be->getResponseBody();
-     if ( !$fp ){
-       if ($header = $be->getResponseHeader("Location")){
-         mdb_base::debug_scalar("No immediate response body - we are redirected.<br>New URL: $header");
-         if (strpos($header,$this->imdbsite."/find?")) {
-           return $this->results($header);
-           break(4);
-         }
-         $url = explode("/",$header);
-         $id  = substr($url[count($url)-2],2);
-         $this->resu[0] = new imdb_person($id);
-         return $this->resu;
-       }else{
-         mdb_base::debug_scalar("No result, no redirection -- something's wrong here...");
-         return NULL;
-       }
-     }
-     $this->page = $fp;
-
-     if ($this->storecache && $this->page != "cannot open page" && $this->page != "") { //store cache
-       $this->cache_write(urlencode(strtolower($this->name)).'.search',$this->page);
-     }
-   } // end (page="")
-
-   if ($this->maxresults > 0) $maxresults = $this->maxresults; else $maxresults = 999999;
-   // make sure to catch col #3, not #1 (pic only)
-   //                        photo           name                   1=id        2=name        3=details
-   preg_match_all('|<tr.*>\s*<td.*>.*</td>\s*<td.*<a href="/name/nm(\d{7})[^>]*>([^<]+)</a>\s*(.*)</td>|Uims',$this->page,$matches);
-   $mc = count($matches[0]);
-   mdb_base::debug_scalar("$mc matches");
-   $mids_checked = array();
-   for ($i=0;$i<$mc;++$i) {
-     if ($i == $maxresults) break; // limit result count
-     $pid = $matches[1][$i];
-     if (in_array($pid,$mids_checked)) continue;
-     $mids_checked[] = $pid;
-     $name    = $matches[2][$i];
-     $info    = $matches[3][$i];
-     $tmpres  = new imdb_person($pid);
-     $tmpres->fullname = $name;
-     if (!empty($info)) {
-       if (preg_match('|<small>\((.*),\s*<a href="/title/tt(\d{7}).*"\s*>(.*)</a>\s*\((\d{4})\)\)|Ui',$info,$match)) {
-         $role = $match[1];
-         $mid  = $match[2];
-         $movie= $match[3];
-         $year = $match[4];
-         $tmpres->setSearchDetails($role,$mid,$movie,$year);
-       }
-     }
-     $this->resu[$i] = $tmpres;
-     unset($tmpres);
-   }
-   return $this->resu;
-  }
  }
 
-?>
+// Some backwards compatibility
+require_once (dirname(__FILE__)."/imdb_person_search.class.php");

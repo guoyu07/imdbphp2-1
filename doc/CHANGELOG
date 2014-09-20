@@ -3,9 +3,46 @@ $Id$
 History for IMDBPHP2
 ====================
 
-v2.2.3
+v2.3.3 (21.08.2014)
+-------------------
+! Fix date of birth and date of death parsing
+
+v2.3.2 (05.08.2014)
+-------------------
+! Fix sound, color and countries methods (broken due to imdb change)
+! Remove 'Add a Plot' from outline method when no outline exists
+! fixing up APIDoc to work with the current processor once more
+
+v2.3.1
+-------------------
+! Fix 'creator' parsing
+
+v2.3 (31.07.2014)
+-----------------
++ New interface for searching people and films ( ->search($searchTerms) )
++ Add composer support
++ Add ability to pass config into classes to override default config. This makes it possible use imdb without editing or adding files to the imdb library folder
+! Fix episode parsing
+! Fix referrer header being same as $_SERVER['referer'] when making requests to imdb
+- Remove unnecessary config key 'trigger_referer'
+
+v2.2.4 (05.06.2014)
+-------------------
++ phpUnit tests added (DJMcTom)
+* some code cleanup and RegExp speedup (DJMcTom)
+- removed support for PEAR http request (DJMcTom)
+! Fix alsoknow so it correctly splits country and comments (DJMcTom)
+* Make sure endyear is the startyear if film has no production span (DJMcTom)
+* Include imdb class in imdbsearch class to prevent errors (DJMcTom)
+* declaring imdbsearch::seturl() obsolete: nowhere referenced, and does not really make sense anymore (Izzy)
+- constructor of mdb_base had a mandatory parameter (id) which was not used. This parameter is now deprecated (no longer listed in ApiRef) but left in for compatibility, will be removed later (Izzy)
+
+v2.2.3 (25.01.2014)
 -------------------
 * some cleanup to imdb::plot_split
+* IMDB site updates hit us again. Fixed: imdb::awards(), imdb_person::bio()
+! Episode search was broken due to incomplete redirect handling in imdbsearch::results()
+* tiny fix to imdb_person::filmograf() to return all character names
 
 v2.2.2 (02.12.2013)
 -------------------

@@ -24,15 +24,6 @@
  */
 class person_base extends mdb_base {
 
-#------------------------------------------------------------[ Constructor ]---
-  /** Initialize class
-   * @constructor person_base
-   * @param string id IMDBID to use for data retrieval
-   */
-  function __construct ($id) {
-    parent::__construct($id);
-  }
-
  #--------------------------------------------------[ Start (over) / Reset ]---
   /** Reset page vars
    * @method protected reset_vars
@@ -40,6 +31,7 @@ class person_base extends mdb_base {
   protected function reset_vars() {
    $this->page["Name"] = "";
    $this->page["Bio"]  = "";
+   $this->page["Publicity"]  = "";
 
    // "Name" page:
    $this->main_photo      = "";
