@@ -16,3 +16,11 @@ http://projects.izzysoft.de/trac/imdbphp/wiki
 
 Branch "master" is the unmodified svn trunk.
 Branch "gitdev" contains this README and a .gitignore file and will be rebased regularly.
+
+
+IMPORTANT NOTE:
+===============
+
+This repository is discontinued since imdbphp now has an official github repository. In the future please use
+
+git@github.com:tboothman/imdbphp.git
